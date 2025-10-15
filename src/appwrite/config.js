@@ -1,112 +1,104 @@
+// src/appwrite/config.js
+
 import conf from '../conf/conf.js';
 import { Client, ID, Databases, Storage, Query } from "appwrite";
 
-export class Service{
+export class Service {
     client = new Client();
     databases;
     bucket;
-    
-    constructor(){
+
+    constructor() {
         this.client
-        .setEndpoint(conf.appwriteUrl)
-        .setProject(conf.appwriteProjectId);
+            .setEndpoint(conf.appwriteUrl)
+            .setProject(conf.appwriteProjectId);
         this.databases = new Databases(this.client);
         this.bucket = new Storage(this.client);
     }
 
-    // src/appwrite/config.js
-
-// In src/appwrite/config.js
-
-// Change this function
-async createPost({title, slug, content, featuredImage, status, userid}){
-    try {
-        return await this.databases.createDocument(
-            conf.appwriteDatabaseId,
-            conf.appwriteCollectionId,
-            ID.unique(), // Use a unique ID instead of slug
-            {
-                title,
-                content,
-                featuredImage,
-                status,
-                userid,
-                slug // Add slug as a field
-            }
-        )
-    } catch (error) {
-        console.log("Appwrite service :: createPost :: error", error);
+    async createPost({ title, slug, content, featuredImage, status, userid }) {
+        try {
+            return await this.databases.createDocument(
+                conf.appwriteDatabaseId,
+                conf.appwriteCollectionId,
+                ID.unique(),
+                { title, slug, content, featuredImage, status, userid }
+            );
+        } catch (error) {
+            console.log("Appwrite service :: createPost :: error", error);
+        }
     }
-}
 
-// In src/appwrite/config.js
-
-async updatePost(postId, {title, slug, content, featuredImage, status}){ // postId is the unique ID now
-    console.log("Data received by updatePost service:", {title, slug, content});
-    try {
-        return await this.databases.updateDocument(
-            conf.appwriteDatabaseId,
-            conf.appwriteCollectionId,
-            postId, // Find document by its real ID
-            {
-                title,
-                content,
-                featuredImage,
-                status,
-                slug, // Update the slug field
-            }
-        )
-    } catch (error) {
-        console.log("Appwrite service :: updatePost :: error", error);
+    async updatePost(postId, { title, slug, content, featuredImage, status }) {
+        try {
+            return await this.databases.updateDocument(
+                conf.appwriteDatabaseId,
+                conf.appwriteCollectionId,
+                postId,
+                { title, slug, content, featuredImage, status }
+            );
+        } catch (error) {
+            console.log("Appwrite service :: updatePost :: error", error);
+        }
     }
-}
 
-    async deletePost(slug){
+    async deletePost(postId) {
         try {
             await this.databases.deleteDocument(
                 conf.appwriteDatabaseId,
                 conf.appwriteCollectionId,
-                slug
-            
-            )
-            return true
+                postId
+            );
+            return true;
         } catch (error) {
-            console.log("Appwrite serive :: deletePost :: error", error);
-            return false
+            console.log("Appwrite service :: deletePost :: error", error);
+            return false;
         }
     }
 
-    async getPost(slug){
+    // THIS FUNCTION IS NOW BY SLUG for the public-facing post page
+    async getPost(slug) {
+        try {
+            const response = await this.databases.listDocuments(
+                conf.appwriteDatabaseId,
+                conf.appwriteCollectionId,
+                [Query.equal('slug', slug)]
+            );
+            return response.documents[0];
+        } catch (error) {
+            console.log("Appwrite service :: getPost :: error", error);
+            return false;
+        }
+    }
+
+    // NEW FUNCTION: To fetch a post by its ID for editing
+    async getPostById(postId) {
         try {
             return await this.databases.getDocument(
                 conf.appwriteDatabaseId,
                 conf.appwriteCollectionId,
-                slug
-            
-            )
+                postId
+            );
         } catch (error) {
-            console.log("Appwrite serive :: getPost :: error", error);
-            return false
+            console.log("Appwrite service :: getPostById :: error", error);
+            return false;
         }
     }
 
-    async getPosts(queries = [Query.equal("status", "active")]){
+    async getPosts(queries = [Query.equal("status", "active")]) {
         try {
             return await this.databases.listDocuments(
                 conf.appwriteDatabaseId,
                 conf.appwriteCollectionId,
-                queries,
-                
-
-            )
+                queries
+            );
         } catch (error) {
-            console.log("Appwrite serive :: getPosts :: error", error);
-            return false
+            console.log("Appwrite service :: getPosts :: error", error);
+            return false;
         }
     }
 
-    // file upload service
-
+    // ... (file upload/delete methods remain the same) ...
     async uploadFile(file){
         try {
             return await this.bucket.createFile(
@@ -133,15 +125,14 @@ async updatePost(postId, {title, slug, content, featuredImage, status}){ // post
         }
     }
 
-    getFilePreview(fileId) {
-    // Change the method from getFilePreview to getFileView
-    return this.bucket.getFileView(
-        conf.appwriteBucketId,
-        fileId
-    );
+    getFilePreview(fileId){
+        return this.bucket.getFileView(
+            conf.appwriteBucketId,
+            fileId
+        )
+    }
 }
-}
+//change
 
-
-const service = new Service()
-export default service
+const service = new Service();
+export default service;
